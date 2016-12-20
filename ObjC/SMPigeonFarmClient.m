@@ -1,18 +1,19 @@
 /**
  *
- * @file SMUpdateMessage.m
+ * @file SMPigeonFarmClient.h
  * @author Sandro Meier <sandro.meier@fidelisfactory.ch>
  *
  */
 
-#import "SMUpdateMessage.h"
+#import "SMPigeonFarmClient.h"
 
 /**
  *  The key used the defaults (NSUserDefaults) to store the ID that was last shown.
+ *  @note Cannot be renamed due to backwards compatibility.
  */
 #define LAST_ID_KEY @"SMUpdateMessageLastID"
 
-@interface SMUpdateMessage ()
+@interface SMPigeonFarmClient ()
 
 /**
  * Shows a UIAlertView with the specified data.
@@ -32,7 +33,7 @@
 
 @end
 
-@implementation SMUpdateMessage {
+@implementation SMPigeonFarmClient {
     
     NSURLConnection *connection;
     NSMutableData *receivedData;
@@ -58,21 +59,21 @@
     if (url == nil) {
         // Raise an exception if no url is given.
         [[NSException exceptionWithName:@"InvalidURLException"
-                                 reason:@"No URL was set in SMUpdateMessage"
+                                 reason:@"No URL was set in SMPigeonFarmClient"
                                userInfo:nil] raise];
     }
     
     
     // Create the request and start it.
     NSURL *messageUrl = [self assembledURL];
-    NSLog(@"SMUpdateMessage: Check for new message at url: %@", messageUrl);
+    NSLog(@"SMPigeonFarmClient: Check for new message at url: %@", messageUrl);
     NSURLRequest *request = [NSURLRequest requestWithURL:messageUrl];
     receivedData = [NSMutableData data];
     connection = [[NSURLConnection alloc] initWithRequest:request
                                                  delegate:self
                                          startImmediately:YES];
     if (!connection) {
-        NSLog(@"SMUpdateMessage: No connection to server");
+        NSLog(@"SMPigeonFarmClient: No connection to server");
     }
 }
 
@@ -146,7 +147,7 @@
                                                   options:NSJSONReadingMutableLeaves
                                                     error:&error];
     if (messageData == nil) {
-        NSLog(@"SMUpdateMessage: Received data could not be parsed");
+        NSLog(@"SMPigeonFarmClient: Received data could not be parsed");
         return;
     }
     
@@ -173,13 +174,13 @@
         [defaults setObject:messageData[@"id"] forKey:LAST_ID_KEY];
     }
     else {
-        NSLog(@"SMUpdateMessage: Message with id %d already shown!", self.lastID);
+        NSLog(@"SMPigeonFarmClient: Message with id %d already shown!", self.lastID);
     }
 }
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
 {
-    NSLog(@"SMUpdateMessage: Connection failed");
+    NSLog(@"SMPigeonFarmClient: Connection failed");
 }
 
 #pragma Getter

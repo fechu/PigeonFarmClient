@@ -1,6 +1,6 @@
 /**
  *
- * @file SMUpdateMessage.h
+ * @file SMPigeonFarmClient.h
  * @author Sandro Meier <sandro.meier@fidelisfactory.ch>
  *
  */
@@ -12,7 +12,7 @@
  *
  *  @param messageId The id of the message that is shown.
  */
-typedef void(^SMUpdateMessageShowMessageBlock)(int messageId);
+typedef void(^SMPigeonFarmClientShowMessageBlock)(int messageId);
 
 /**
  *  A block that can be used as a callback when a button is pressed in alert view.
@@ -21,9 +21,9 @@ typedef void(^SMUpdateMessageShowMessageBlock)(int messageId);
  *  @param button    The button data of the button that was touched. This is exactly the same 
  *                   dictionary as the one received from the server for this button.
  */
-typedef void(^SMUpdateMessageButtonTouchedBlock)(int messageId, NSDictionary *button);
+typedef void(^SMPigeonFarmClientButtonTouchedBlock)(int messageId, NSDictionary *button);
 
-@interface SMUpdateMessage : NSObject <NSURLConnectionDataDelegate, UIAlertViewDelegate>
+@interface SMPigeonFarmClient : NSObject <NSURLConnectionDataDelegate, UIAlertViewDelegate>
 
 /**
  * The location where the JSON data containing the message can be found.
@@ -47,12 +47,12 @@ typedef void(^SMUpdateMessageButtonTouchedBlock)(int messageId, NSDictionary *bu
 /**
  *  A block that gets executed when a message is shown.
  */
-@property(nonatomic, copy) SMUpdateMessageShowMessageBlock showMessageBlock;
+@property(nonatomic, copy) SMPigeonFarmClientShowMessageBlock showMessageBlock;
 
 /**
  *  A block that is executed when the user touches a button in a message popup.
  */
-@property(nonatomic, copy) SMUpdateMessageButtonTouchedBlock buttonTouchedBlock;
+@property(nonatomic, copy) SMPigeonFarmClientButtonTouchedBlock buttonTouchedBlock;
 
 /**
  * Downloads the newest messages and shows it.

@@ -1,6 +1,6 @@
-# SMUpdateMessage
+# SMPigeonFarmClient
 
-SMUpdateMessage ist eine Klasse die an einem angegebenen Ort (URL) nach einer Nachricht sucht die angezeigt werden soll.
+SMPigeonFarmClient ist eine Klasse die an einem angegebenen Ort (URL) nach einer Nachricht sucht die angezeigt werden soll.
 Das Resultat ist eine AlertView mit der Nachricht und eventuellen Buttons.
 
 ## Daten
@@ -30,11 +30,11 @@ Ob es sich dabei um ein File handelt oder ein Skript (z.B. PHP) spielt keine Rol
 
 Am besten wird die Klasse im AppDelegate instanziert und ausgeführt. Als erstes die SMUpdateMessage.h Datei importieren.
 
-    #import "SMUpdateMessage.h"
+    #import "SMPigeonFarmClient.h"
 
 Dann muss im AppDelegate.h eine Instanzvariable hinzugefügt werden. 
 
-    SMUpdateMessage *message;
+    SMPigeonFarmClient *message;
 
 In der Methode 
 
@@ -43,7 +43,7 @@ In der Methode
 wird dann eine Instanz erstellt und ihr beauftragt die Nachricht anzuzeigen.
 
     // Check for news.
-    message = [[SMUpdateMessage alloc] init];
+    message = [[SMPigeonFarmClient alloc] init];
     message.url = @"http://www.example.com/path/to/update.json";
     [message showMessage];
 
