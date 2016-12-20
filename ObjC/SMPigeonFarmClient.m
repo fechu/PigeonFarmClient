@@ -25,7 +25,7 @@
 /**
  *  Assembles the URL
  *
- *  Takes the given URL and assembles the URL. This will insert all data into the placeholders.
+ *  Takes the given URL and assembles the URL. Also replaces all the placeholders with the actual values.
  *
  *  @return The assembled urls which includes no more placeholders.
  */
@@ -203,6 +203,12 @@
     NSString *appVersion = infoDic[@"CFBundleShortVersionString"];
     NSString *urlString = [url stringByReplacingOccurrencesOfString:@"__VERSION__"
                                                          withString:appVersion];
+    
+    // Replace __LANGUAGE__ in the url
+    NSString *language = [[[NSBundle mainBundle] preferredLocalizations] objectAtIndex:0];
+    urlString = [urlString stringByReplacingOccurrencesOfString:@"__LANGUAGE__"
+                                                     withString:language];
+    
     return [NSURL URLWithString:urlString];
 }
 

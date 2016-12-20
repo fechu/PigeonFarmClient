@@ -29,13 +29,14 @@ typedef void(^SMPigeonFarmClientButtonTouchedBlock)(int messageId, NSDictionary 
  * The location where the JSON data containing the message can be found.
  * The URL will have approximatly look like the following: "http://www.example.com/news.json"
  * 
- * To give the webservice additional flexibility, you can specify a "__VERSION__"
- * placeholder in the URL. These will be replaced with the appropriate values.
+ * Placeholders: 
+ *  - __VERSION__ : The version of the application
+ *  - __LANGUAGE__: The language of the device.
  *
  * Example:
- *  http://www.example.com/news.php?version=__VERSION__
+ *  http://www.example.com/news.php?version=__VERSION__&language=__LANGUAGE__
  *  If you are using Version 1.0.1 the URL will look like this when called.
- *  http://www.example.com/news.php?version=1.0.1
+ *  http://www.example.com/news.php?version=1.0.1&language=de
  */
 @property(nonatomic, strong) NSString *url;
 
