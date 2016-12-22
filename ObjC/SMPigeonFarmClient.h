@@ -46,6 +46,12 @@ typedef void(^SMPigeonFarmClientButtonTouchedBlock)(int messageId, NSDictionary 
 @property(nonatomic, readonly) int lastID;
 
 /**
+ * Should a message be shown on the first launch of the application? 
+ * This defaults to false.
+ */
+@property(nonatomic) BOOL showOnFirstLaunch;
+
+/**
  *  A block that gets executed when a message is shown.
  */
 @property(nonatomic, copy) SMPigeonFarmClientShowMessageBlock showMessageBlock;

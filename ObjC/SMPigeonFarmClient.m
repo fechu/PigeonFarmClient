@@ -12,6 +12,11 @@
  *  @note Cannot be renamed due to backwards compatibility.
  */
 #define LAST_ID_KEY @"SMUpdateMessageLastID"
+/**
+ *  Key that is used to store if this is the first launch in the user defaults. 
+ *  This does not store the value of the `showOnFirstLaunch` but rather if it is the first launch.
+ */
+#define LAUNCHED_BEFORE_KEY @"SMPigeonFarmClientLaunchedBefore"
 
 @interface SMPigeonFarmClient ()
 
@@ -31,6 +36,12 @@
  */
 - (NSURL *)assembledURL;
 
+/**
+ * Is this the first launch of the application. 
+ * This is used together with the `showOnFirstLaunch` property.
+ */
+- (BOOL)isFirstLaunch;
+
 @end
 
 @implementation SMPigeonFarmClient {
@@ -44,12 +55,14 @@
 
 @synthesize url;
 @synthesize lastID;
+@synthesize showOnFirstLaunch;
 
 - (id)init
 {
     self = [super init];
     if (self) {
         lastID = -1;
+        showOnFirstLaunch = NO;
     }
     return self;
 }
@@ -63,6 +76,17 @@
                                userInfo:nil] raise];
     }
     
+    // Let's check if this is the first launch, and if yes if we even should show a message
+    if ([self isFirstLaunch]) {
+        // We store that this was the first launch and that we later want to show messages.
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:LAUNCHED_BEFORE_KEY];
+        
+        // This is the first launch? Does the client want that we show the message?
+        if (!showOnFirstLaunch) {
+            NSLog(@"SMPigeonFarmClient: Skipping message because of first launch");
+            return;
+        }
+    }
     
     // Create the request and start it.
     NSURL *messageUrl = [self assembledURL];
@@ -196,6 +220,8 @@
     return lastID;
 }
 
+#pragma mark - Private Methods
+
 - (NSURL *)assembledURL
 {
     // Replace __VERSION__ in the url
@@ -210,6 +236,15 @@
                                                      withString:language];
     
     return [NSURL URLWithString:urlString];
+}
+
+- (BOOL)isFirstLaunch
+{
+    // Check the user defaults
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    BOOL launchedBefore = [defaults boolForKey:LAUNCHED_BEFORE_KEY];
+    
+    return !launchedBefore;
 }
 
 @end
