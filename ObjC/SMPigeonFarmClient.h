@@ -6,6 +6,7 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 /**
  *  A block that can be used as a callback when a message is shown.
