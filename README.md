@@ -45,7 +45,7 @@ wird dann eine Instanz erstellt und ihr beauftragt die Nachricht anzuzeigen.
     // Check for news.
     message = [[SMPigeonFarmClient alloc] init];
     message.url = @"http://www.example.com/path/to/update.json";
-    [message showMessage];
+    [message showMessageInViewController:self.window.rootViewController];
 
 Im URL kann `__VERSION__` verwendet werden. Dies wird vor dem abschicken des Requests durch den Wert des `CFBundleShortVersionString`ersetzt. 
 Ebenfalls kann `__LANGUAGE__` verwendet werden, welches dann durch den 2 Zeichen ISO code der Sprache ersetzt wird die momentan in der App verwendet wird. 

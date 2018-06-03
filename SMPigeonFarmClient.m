@@ -28,6 +28,11 @@
                   andButtons:(NSArray *)buttonTitles;
 
 /**
+ * Handles the received data and shows a message if necessary.
+ */
+- (void)handleReceivedData:(NSData *)data;
+
+/**
  *  Assembles the URL
  *
  *  Takes the given URL and assembles the URL. Also replaces all the placeholders with the actual values.
@@ -46,11 +51,15 @@
 
 @implementation SMPigeonFarmClient {
     
-    NSURLConnection *connection;
-    NSMutableData *receivedData;
-    NSString *encoding;
-    
+    /**
+     * The parsed message data.
+     */
     NSDictionary *messageData;
+
+    /**
+     * The view controller in which the messages should be shown once loaded.
+     */
+    UIViewController *viewController;
 }
 
 @synthesize url;
@@ -67,7 +76,7 @@
     return self;
 }
 
-- (void)showMessage
+- (void)showMessageInViewController:(UIViewController *)aViewController
 {
     if (url == nil) {
         // Raise an exception if no url is given.
@@ -87,87 +96,82 @@
             return;
         }
     }
+
+    // Remember the view controller for later.
+    viewController = aViewController;
     
     // Create the request and start it.
     NSURL *messageUrl = [self assembledURL];
     NSLog(@"SMPigeonFarmClient: Check for new message at url: %@", messageUrl);
-    NSURLRequest *request = [NSURLRequest requestWithURL:messageUrl];
-    receivedData = [NSMutableData data];
-    connection = [[NSURLConnection alloc] initWithRequest:request
-                                                 delegate:self
-                                         startImmediately:YES];
-    if (!connection) {
-        NSLog(@"SMPigeonFarmClient: No connection to server");
-    }
+    NSURLSession *session = [NSURLSession sharedSession];
+    void (^completionHandler)(NSData * _Nullable,
+                              NSURLResponse * _Nullable,
+                              NSError * _Nullable) = ^void(NSData * _Nullable data,
+                                                           NSURLResponse * _Nullable response,
+                                                           NSError * _Nullable error) {
+        if (error == nil) {
+            [self handleReceivedData:data];
+        }
+        else {
+            NSLog(@"SMPigeonFarmClient: Failure loading data from: %@", error);
+        }
+    };
+    NSURLSessionDataTask *task = [session dataTaskWithURL:messageUrl
+                                        completionHandler:completionHandler];
+    [task resume];
 }
 
 - (void)showMessageWithTitle:(NSString *)title
                      message:(NSString *)message
                   andButtons:(NSArray *)buttonTitles
 {
-    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:title
-                                                    message:message
-                                                   delegate:self
-                                          cancelButtonTitle:nil 
-                                          otherButtonTitles:nil];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:title
+                                                                   message:message
+                                                            preferredStyle:UIAlertControllerStyleAlert];
     
     // Add the buttons
+    int i = 0;
     for (NSString *buttonTitle in buttonTitles) {
-        [alert addButtonWithTitle:buttonTitle];
+        void (^handler)(UIAlertAction * action) = ^void(UIAlertAction *action) {
+            NSArray *buttons = self->messageData[@"buttons"];
+            NSDictionary *button = [buttons objectAtIndex:i];
+            
+            // Call the block that a button was clicked
+            if (self.buttonTouchedBlock) {
+                self.buttonTouchedBlock([self->messageData[@"id"] intValue], button);
+            }
+            
+            if ([button[@"action"] isEqualToString:@"url"]) {
+                // Open the url
+                NSURL *openUrl = [NSURL URLWithString:button[@"url"]];
+                [[UIApplication sharedApplication] openURL:openUrl];
+            }
+        };
+        
+        UIAlertAction *action = [UIAlertAction actionWithTitle:buttonTitle
+                                                         style:UIAlertActionStyleDefault
+                                                       handler:handler];
+        [alert addAction:action];
+        i++;
     }
     
     // Show the alert
-    [alert show];
-    
+    [viewController presentViewController:alert
+                                 animated:true
+                               completion:NULL];
+
     // Call the block that the alert was shown.
     if (self.showMessageBlock) {
         self.showMessageBlock([messageData[@"id"] intValue]);
     }
 }
 
-#pragma UIAlertViewDelegate Methods
-
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+- (void)handleReceivedData:(NSData *)data
 {
-    NSArray *buttons = messageData[@"buttons"];
-    NSDictionary *button = [buttons objectAtIndex:buttonIndex];
-    
-    // Call the block that a button was clicked
-    if (self.buttonTouchedBlock) {
-        self.buttonTouchedBlock([messageData[@"id"] intValue], button);
-    }
-    
-    if ([button[@"action"] isEqualToString:@"url"]) {
-        // Open the url
-        NSURL *openUrl = [NSURL URLWithString:button[@"url"]];
-        [[UIApplication sharedApplication] openURL:openUrl];
-    }
-}
-
-#pragma NSURLConnection Delegate
-
-- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
-{
-    // Perhaps a redirection occured. So we reset the received data.
-    [receivedData setLength:0];
-    
-    // Get the encoding. 
-    encoding = [response textEncodingName];
-}
-
-- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
-{
-    // Append the received data.
-    [receivedData appendData:data];
-}
-
-- (void)connectionDidFinishLoading:(NSURLConnection *)connection
-{
-    // We finished loading. 
-    
+    // We finished loading.
     // Parse the json.
     NSError *error = nil;
-    messageData = [NSJSONSerialization JSONObjectWithData:receivedData
+    messageData = [NSJSONSerialization JSONObjectWithData:data
                                                   options:NSJSONReadingMutableLeaves
                                                     error:&error];
     if (messageData == nil) {
@@ -200,11 +204,6 @@
     else {
         NSLog(@"SMPigeonFarmClient: Message with id %d already shown!", self.lastID);
     }
-}
-
-- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
-{
-    NSLog(@"SMPigeonFarmClient: Connection failed");
 }
 
 #pragma Getter
