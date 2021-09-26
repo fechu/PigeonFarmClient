@@ -24,7 +24,7 @@ typedef void(^SMPigeonFarmClientShowMessageBlock)(int messageId);
  */
 typedef void(^SMPigeonFarmClientButtonTouchedBlock)(int messageId, NSDictionary *button);
 
-@interface SMPigeonFarmClient : NSObject <NSURLConnectionDataDelegate, UIAlertViewDelegate>
+@interface SMPigeonFarmClient : NSObject <NSURLConnectionDataDelegate>
 
 /**
  * The location where the JSON data containing the message can be found.

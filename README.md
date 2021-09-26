@@ -14,7 +14,7 @@ Die Daten werden als JSON online gespeichert. Ein Beispiel kann so aussehen:
      "buttons" : [
       {
        "title" : "Schliessen",
-       "action": "cancel",
+       "action": "cancel"
       },
       {
        "title" : "Google",

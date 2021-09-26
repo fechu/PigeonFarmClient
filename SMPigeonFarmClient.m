@@ -6,6 +6,7 @@
  */
 
 #import "SMPigeonFarmClient.h"
+#import "UIApplication+ViewController.h"
 
 /**
  *  The key used the defaults (NSUserDefaults) to store the ID that was last shown.
@@ -25,7 +26,7 @@
  */
 - (void)showMessageWithTitle:(NSString *)title 
                      message:(NSString *)message 
-                  andButtons:(NSArray *)buttonTitles;
+                  andButtons:(NSArray *)buttonData;
 
 /**
  *  Assembles the URL
@@ -45,17 +46,14 @@
 @end
 
 @implementation SMPigeonFarmClient {
-    
-    NSURLConnection *connection;
-    NSMutableData *receivedData;
-    NSString *encoding;
-    
     NSDictionary *messageData;
 }
 
 @synthesize url;
 @synthesize lastID;
 @synthesize showOnFirstLaunch;
+
+#pragma mark Public Interface
 
 - (id)init
 {
@@ -88,126 +86,51 @@
         }
     }
     
-    // Create the request and start it.
+    // Load the data from the URL
     NSURL *messageUrl = [self assembledURL];
     NSLog(@"SMPigeonFarmClient: Check for new message at url: %@", messageUrl);
-    NSURLRequest *request = [NSURLRequest requestWithURL:messageUrl];
-    receivedData = [NSMutableData data];
-    connection = [[NSURLConnection alloc] initWithRequest:request
-                                                 delegate:self
-                                         startImmediately:YES];
-    if (!connection) {
-        NSLog(@"SMPigeonFarmClient: No connection to server");
-    }
-}
-
-- (void)showMessageWithTitle:(NSString *)title
-                     message:(NSString *)message
-                  andButtons:(NSArray *)buttonTitles
-{
-    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:title
-                                                    message:message
-                                                   delegate:self
-                                          cancelButtonTitle:nil 
-                                          otherButtonTitles:nil];
-    
-    // Add the buttons
-    for (NSString *buttonTitle in buttonTitles) {
-        [alert addButtonWithTitle:buttonTitle];
-    }
-    
-    // Show the alert
-    [alert show];
-    
-    // Call the block that the alert was shown.
-    if (self.showMessageBlock) {
-        self.showMessageBlock([messageData[@"id"] intValue]);
-    }
-}
-
-#pragma UIAlertViewDelegate Methods
-
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
-{
-    NSArray *buttons = messageData[@"buttons"];
-    NSDictionary *button = [buttons objectAtIndex:buttonIndex];
-    
-    // Call the block that a button was clicked
-    if (self.buttonTouchedBlock) {
-        self.buttonTouchedBlock([messageData[@"id"] intValue], button);
-    }
-    
-    if ([button[@"action"] isEqualToString:@"url"]) {
-        // Open the url
-        NSURL *openUrl = [NSURL URLWithString:button[@"url"]];
-        [[UIApplication sharedApplication] openURL:openUrl];
-    }
-}
-
-#pragma NSURLConnection Delegate
-
-- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
-{
-    // Perhaps a redirection occured. So we reset the received data.
-    [receivedData setLength:0];
-    
-    // Get the encoding. 
-    encoding = [response textEncodingName];
-}
-
-- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
-{
-    // Append the received data.
-    [receivedData appendData:data];
-}
-
-- (void)connectionDidFinishLoading:(NSURLConnection *)connection
-{
-    // We finished loading. 
-    
-    // Parse the json.
-    NSError *error = nil;
-    messageData = [NSJSONSerialization JSONObjectWithData:receivedData
-                                                  options:NSJSONReadingMutableLeaves
-                                                    error:&error];
-    if (messageData == nil) {
-        NSLog(@"SMPigeonFarmClient: Received data could not be parsed");
-        return;
-    }
-    
-    /// TODO: Check the messageData before processing.
-    /// Right now the application will crash if required data is missing. 
-    
-    // Show the message if its a new message
-    if ([[messageData objectForKey:@"id"] intValue] != self.lastID) {
-        // Get the data
-        NSString *title = messageData[@"title"];
-        NSString *message = messageData[@"message"];
-        NSArray *buttons = messageData[@"buttons"];
-        
-        // Get the button names
-        NSMutableArray *buttonNames = [NSMutableArray array];
-        for (NSDictionary *buttonDic in buttons) {
-            [buttonNames addObject:buttonDic[@"title"]];
+    NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithURL:messageUrl completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        // We finished loading.
+        if (error) {
+            NSLog(@"SMPigeonFarmClient: Failed to contact server: %@", error);
+            return;
         }
         
-        [self showMessageWithTitle:title message:message andButtons:buttonNames];
+        // Parse the json.
+        NSError *jsonError = nil;
+        messageData = [NSJSONSerialization JSONObjectWithData:data
+                                                      options:NSJSONReadingMutableLeaves
+                                                        error:&jsonError];
+        if (messageData == nil) {
+            NSLog(@"SMPigeonFarmClient: Received data could not be parsed");
+            NSLog(@"SMPigeonFarmClient: %@", jsonError);
+            return;
+        }
         
-        // Update the id.
-        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-        [defaults setObject:messageData[@"id"] forKey:LAST_ID_KEY];
-    }
-    else {
-        NSLog(@"SMPigeonFarmClient: Message with id %d already shown!", self.lastID);
-    }
+        /// TODO: Check the messageData before processing.
+        /// Right now the application will crash if required data is missing.
+        
+        // Show the message if its a new message
+        if ([[messageData objectForKey:@"id"] intValue] != self.lastID) {
+            // Get the data
+            NSString *title = messageData[@"title"];
+            NSString *message = messageData[@"message"];
+            NSArray *buttons = messageData[@"buttons"];
+            
+            [self showMessageWithTitle:title message:message andButtons:buttons];
+            
+            // Update the id.
+            NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+            [defaults setObject:messageData[@"id"] forKey:LAST_ID_KEY];
+        }
+        else {
+            NSLog(@"SMPigeonFarmClient: Message with id %d already shown!", self.lastID);
+        }
+    }];
+    [task resume];
 }
 
-- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
-{
-    NSLog(@"SMPigeonFarmClient: Connection failed");
-}
-
-#pragma Getter
+#pragma mark Getter
 
 - (int)lastID
 {
@@ -221,6 +144,47 @@
 }
 
 #pragma mark - Private Methods
+
+- (void)showMessageWithTitle:(NSString *)title
+                     message:(NSString *)message
+                  andButtons:(NSArray *)buttonData
+{
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
+    
+    // Add the buttons
+    for (NSDictionary *button in buttonData) {
+        NSString *title = button[@"title"];
+        
+        UIAlertAction *action = [UIAlertAction actionWithTitle:title
+                                                         style:UIAlertActionStyleDefault
+                                                       handler:^(UIAlertAction * _Nonnull action) {
+            // Call the block that a button was clicked
+            if (self.buttonTouchedBlock) {
+                self.buttonTouchedBlock([messageData[@"id"] intValue], button);
+            }
+            
+            if ([button[@"action"] isEqualToString:@"url"]) {
+                // Open the url
+                NSURL *openUrl = [NSURL URLWithString:button[@"url"]];
+                [[UIApplication sharedApplication] openURL:openUrl options:@{} completionHandler:nil];
+                
+            }
+        }];
+        [alert addAction:action];
+    }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // Show the alert
+        UIViewController *topViewController = [UIApplication topMostViewController];
+        [topViewController presentViewController:alert animated:YES completion:nil];
+    });
+    
+    // Call the block that the alert was shown.
+    if (self.showMessageBlock) {
+        self.showMessageBlock([messageData[@"id"] intValue]);
+    }
+}
+
 
 - (NSURL *)assembledURL
 {
