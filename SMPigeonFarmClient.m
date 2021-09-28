@@ -21,6 +21,12 @@
 @interface SMPigeonFarmClient ()
 
 /**
+ * Checks that the given data is valid message data. I.e. it checks that it contains all the required keys.
+ * Refer to the README for an example of a full message.
+ */
+- (BOOL)validateMessageData:(NSDictionary *)data;
+
+/**
  * Shows a UIAlertView with the specified data.
  */
 - (void)showMessageWithTitle:(NSString *)title 
@@ -121,6 +127,42 @@
     [task resume];
 }
 
+#pragma mark - Private Methods
+
+- (BOOL)validateMessageData:(NSDictionary *)data
+{
+    if (![data isKindOfClass:[NSDictionary class]]) {
+        return NO;
+    }
+    
+    if ([data objectForKey:@"title"] && [data objectForKey:@"id"] && [data objectForKey:@"message"] && [data objectForKey:@"buttons"]) {
+        // Check all the buttons
+        if (![[data objectForKey:@"buttons"] isKindOfClass:[NSArray class]]) {
+            return NO;
+        }
+        NSArray *buttons = [data objectForKey:@"buttons"];
+        
+        for (NSDictionary *buttonData in buttons) {
+            if (![buttonData isKindOfClass:[NSDictionary class]]) {
+                return NO;
+            }
+            // Required keys for buttons
+            if (!([buttonData objectForKey:@"title"] && [buttonData objectForKey:@"action"])) {
+                return NO;
+            }
+            
+            // If the action is URL we also need a "url" field
+            if ([[buttonData objectForKey:@"action"]  isEqual: @"url"] && ![buttonData objectForKey:@"url"]) {
+                return NO;
+            }
+        }
+    } else {
+        return NO;
+    }
+    
+    return YES;
+}
+
 - (void)showMessageWithTitle:(NSString *)title
                      message:(NSString *)message
                   andButtons:(NSArray *)buttonTitles
@@ -144,7 +186,7 @@
             if ([button[@"action"] isEqualToString:@"url"]) {
                 // Open the url
                 NSURL *openUrl = [NSURL URLWithString:button[@"url"]];
-                [[UIApplication sharedApplication] openURL:openUrl];
+                [[UIApplication sharedApplication] openURL:openUrl options:@{} completionHandler: nil];
             }
         };
         
@@ -179,9 +221,13 @@
         return;
     }
     
-    /// TODO: Check the messageData before processing.
-    /// Right now the application will crash if required data is missing. 
-    
+    // Check the messageData before processing.
+    if (![self validateMessageData:messageData]) {
+        NSLog(@"SMPigeonFarmClient: Received data is not a valid message");
+        NSLog(@"SMPigeonFarmClient: %@", messageData);
+        return;
+    }
+
     // Show the message if its a new message
     if ([[messageData objectForKey:@"id"] intValue] != self.lastID) {
         // Get the data
