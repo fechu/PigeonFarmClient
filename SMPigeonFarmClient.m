@@ -198,9 +198,11 @@
     }
     
     // Show the alert
-    [viewController presentViewController:alert
-                                 animated:true
-                               completion:NULL];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [viewController presentViewController:alert
+                                     animated:true
+                                   completion:NULL];
+    });
 
     // Call the block that the alert was shown.
     if (self.showMessageBlock) {
